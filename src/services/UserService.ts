@@ -1,5 +1,4 @@
-import { typedRequest } from '../../src/services/api/typedRequest';
-import type { paths } from '../../src/services/api/platform-schema'; // generated OpenAPI types
+import { apiClient, type ApiComponents, type ApiPaths } from '@/services/ApiClient.ts';
 
 type UserGetResponse = paths['/api/v1/user']['get']['responses'][200]['content']['application/json'];
 type UserPatchRequestBody = paths['/api/v1/user']['patch']['requestBody']['content']['application/json'];
@@ -16,13 +15,12 @@ export default class UserService {
     );
   }
 
-  // Get city info from zip code, typed from OpenAPI
-  getCityFromZip(zip: string) {
-    return typedRequest<typeof UserService.ADDRESS_ENDPOINT, 'get'>(
-      'get',
-      UserService.ADDRESS_ENDPOINT,
-      {params: {query: { zip },},}
-    );
+  // Get city info from zip code - API returns array, take first element
+  async getCityFromZip(zip: string): Promise<AddressInfo> {
+    const result = await apiClient.get('/api/v1/address', {params: { zip },});
+    // API returns an array of addresses, we take the first one
+    const addresses = Array.isArray(result) ? result : [];
+    return (addresses.length > 0 ? addresses[0] : {}) as AddressInfo;
   }
 
   async updateUser(updatedUser: Partial<UserPatchRequestBody>) {
@@ -38,7 +36,7 @@ export default class UserService {
 
 
   // Delete user, returns boolean success
-  async deleteUser() {
+  async deleteUser(): Promise<boolean> {
     try {
       await typedRequest<typeof UserService.USER_ENDPOINT, 'delete'>(
         'delete',
